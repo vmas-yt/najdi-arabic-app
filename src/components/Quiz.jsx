@@ -1,20 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { beginnerQuestions } from "../data/questionBank.beginner";
+import { intermediateQuestions } from "../data/questionBank.intermediate";
 import { listenAndGrade, speechRecognitionSupported } from "../lib/speechRecognition";
 import { recordAnswer } from "../lib/progress";
 import { useAuth } from "../context/AuthContext";
+import { shouldShowEnglish, shouldSuggestGraduation, NEXT_LEVEL } from "../lib/levelProgression";
 
-// Per-level English-visibility rule:
-//  - beginner: always show English for prompt + answer + explanation
-//  - intermediate: English shown until the user passes a per-session
-//    accuracy threshold (see README for graduation-criteria discussion),
-//    then Arabic-only except explanations on wrong answers (bilingual)
-//  - advanced: Arabic-only throughout; explanations bilingual only on
-//    wrong answers
+// Per-level English-visibility rule — see levelProgression.js for the full
+// logic. Summary: beginner always shows English; advanced never does;
+// intermediate is driven by rolling accuracy over the last 10 answers,
+// with a manual toggle that overrides (and pauses) that rolling logic.
 const QUESTION_BANKS = {
   beginner: beginnerQuestions,
-  intermediate: [], // populated in a later pass
-  advanced: [],
+  intermediate: intermediateQuestions,
+  advanced: [], // populated in a later pass
 };
 
 function shuffle(array) {
@@ -26,7 +25,7 @@ function shuffle(array) {
   return copy;
 }
 
-export default function Quiz({ level, onBackToLevels }) {
+export default function Quiz({ level, onBackToLevels, onAdvanceLevel }) {
   const { user } = useAuth();
   const questions = useMemo(() => shuffle(QUESTION_BANKS[level] || []), [level]);
 
@@ -38,17 +37,37 @@ export default function Quiz({ level, onBackToLevels }) {
   const [sessionCorrect, setSessionCorrect] = useState(0);
   const [sessionTotal, setSessionTotal] = useState(0);
 
+  // Rolling-accuracy + manual-toggle English visibility (intermediate only;
+  // see levelProgression.js). answerHistory is chronological, this session,
+  // this level only — resets if the user changes level and comes back.
+  const [answerHistory, setAnswerHistory] = useState([]);
+  const [manualHideEnglish, setManualHideEnglish] = useState(false);
+
+  // Graduation suggestion (soft, coverage + accuracy based; see
+  // levelProgression.js). categoryStats accumulates this session.
+  const [categoryStats, setCategoryStats] = useState({});
+  const [graduationDismissed, setGraduationDismissed] = useState(false);
+
   const q = questions[index];
 
-  // Beginner always shows English. Other levels: placeholder rule for now
-  // (always show until graduation logic is wired up — see README).
-  const showEnglish = level === "beginner";
+  const showEnglish = shouldShowEnglish(level, manualHideEnglish, answerHistory);
+  const nextLevel = NEXT_LEVEL[level];
+  const showGraduationBanner =
+    nextLevel && !graduationDismissed && shouldSuggestGraduation(categoryStats);
 
   useEffect(() => {
     setSelected(null);
     setAnswered(false);
     setSpeakResult(null);
   }, [index]);
+
+  // Reset per-level session tracking when the level changes.
+  useEffect(() => {
+    setAnswerHistory([]);
+    setManualHideEnglish(false);
+    setCategoryStats({});
+    setGraduationDismissed(false);
+  }, [level]);
 
   if (!q) {
     return (
@@ -59,6 +78,20 @@ export default function Quiz({ level, onBackToLevels }) {
     );
   }
 
+  function trackAnswer(correct, category) {
+    setAnswerHistory((h) => [...h, correct]);
+    setCategoryStats((stats) => {
+      const prev = stats[category] || { attempted: 0, correct: 0 };
+      return {
+        ...stats,
+        [category]: {
+          attempted: prev.attempted + 1,
+          correct: prev.correct + (correct ? 1 : 0),
+        },
+      };
+    });
+  }
+
   function handleMcqSelect(i) {
     if (answered) return;
     setSelected(i);
@@ -66,6 +99,7 @@ export default function Quiz({ level, onBackToLevels }) {
     const correct = i === q.correctIndex;
     setSessionTotal((t) => t + 1);
     if (correct) setSessionCorrect((c) => c + 1);
+    trackAnswer(correct, q.category);
     recordAnswer({
       userId: user?.id,
       level,
@@ -81,11 +115,12 @@ export default function Quiz({ level, onBackToLevels }) {
     }
     setListening(true);
     try {
-      const result = await listenAndGrade(q.expectedAnswer.translit, { lang: "ar-SA" });
+      const result = await listenAndGrade(q.expectedAnswer.ar, { lang: "ar-SA" });
       setSpeakResult(result);
       setAnswered(true);
       setSessionTotal((t) => t + 1);
       if (result.isCorrect) setSessionCorrect((c) => c + 1);
+      trackAnswer(result.isCorrect, q.category);
       recordAnswer({
         userId: user?.id,
         level,
@@ -104,6 +139,11 @@ export default function Quiz({ level, onBackToLevels }) {
     setIndex((i) => (i + 1) % questions.length);
   }
 
+  function handleSkip() {
+    // Skipping does not count as an attempt — no history/stats change.
+    setIndex((i) => (i + 1) % questions.length);
+  }
+
   const isCorrect =
     q.type === "speaking" ? speakResult?.isCorrect : selected === q.correctIndex;
 
@@ -113,10 +153,42 @@ export default function Quiz({ level, onBackToLevels }) {
         <button className="link-button" onClick={onBackToLevels}>
           ← Change level
         </button>
-        <span className="quiz-progress">
-          {sessionCorrect}/{sessionTotal} correct this session
-        </span>
+        <div className="quiz-topbar-right">
+          {level === "intermediate" && (
+            <label className="english-toggle">
+              <input
+                type="checkbox"
+                checked={manualHideEnglish}
+                onChange={(e) => setManualHideEnglish(e.target.checked)}
+              />
+              Hide English manually
+            </label>
+          )}
+          <span className="quiz-progress">
+            {sessionCorrect}/{sessionTotal} correct this session
+          </span>
+        </div>
       </div>
+
+      {showGraduationBanner && (
+        <div className="graduation-banner">
+          <p>
+            You're doing well at this level — want to try{" "}
+            <strong>{nextLevel}</strong>?
+          </p>
+          <div className="graduation-banner-actions">
+            <button
+              className="next-button"
+              onClick={() => onAdvanceLevel && onAdvanceLevel(nextLevel)}
+            >
+              Try {nextLevel}
+            </button>
+            <button className="link-button" onClick={() => setGraduationDismissed(true)}>
+              Not yet, keep practicing here
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="quiz-card">
         <span className="quiz-category">{q.category.replaceAll("_", " ")}</span>
@@ -159,6 +231,11 @@ export default function Quiz({ level, onBackToLevels }) {
             <button onClick={handleSpeak} disabled={listening || answered} className="mic-button">
               {listening ? "Listening..." : answered ? "Answered" : "🎤 Tap to speak"}
             </button>
+            {!answered && (
+              <button onClick={handleSkip} className="link-button skip-button">
+                Skip for now
+              </button>
+            )}
 
             {speakResult?.error && <div className="notice notice-error">{speakResult.error}</div>}
 
