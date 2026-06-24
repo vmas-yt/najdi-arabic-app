@@ -1,0 +1,468 @@
+/* ===================================================================
+   Speaking Najdi — web app styles
+   Design language deliberately continues the book's own identity:
+   DEEP_TEAL / GOLD / RUST as primary accents, the triangle weaving
+   motif from the cover as a recurring divider, serif display type
+   echoing the book's title treatment.
+   =================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;700&display=swap');
+
+:root {
+  --deep-teal: #1A5F7A;
+  --gold: #C49A3B;
+  --rust: #B85C38;
+  --sage: #E2EDE2;
+  --sage-dark: #4F7A52;
+  --pale-gold: #FDF2DB;
+  --pale-rust: #F4E6DD;
+  --cream: #FAF7F0;
+  --ink: #1C1C1C;
+  --grey: #6B6B6B;
+  --advance-purple: #6B4226;
+
+  --font-display: "Noto Serif", serif;
+  --font-body: "Inter", sans-serif;
+  --font-arabic: "Noto Naskh Arabic", serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Triangle weaving motif, echoing the book cover border ------------ */
+.triangle-divider {
+  height: 10px;
+  width: 100%;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--gold) 0 5px,
+    var(--rust) 5px 10px,
+    transparent 10px 14px
+  );
+  opacity: 0.85;
+}
+
+/* Loading -------------------------------------------------------- */
+.loading-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-family: var(--font-display);
+  color: var(--deep-teal);
+  font-size: 1.4rem;
+}
+
+/* Auth screen ------------------------------------------------------ */
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, var(--deep-teal) 0%, var(--deep-teal) 38%, var(--cream) 38%);
+  padding: 24px;
+}
+
+.auth-card {
+  background: #fff;
+  border-radius: 4px;
+  padding: 40px 36px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(26, 95, 122, 0.25);
+}
+
+.auth-card h1 {
+  font-family: var(--font-display);
+  font-size: 2.1rem;
+  color: var(--deep-teal);
+  margin: 0 0 4px;
+  letter-spacing: 0.01em;
+}
+
+.auth-card .subtitle {
+  color: var(--grey);
+  margin: 0 0 24px;
+  font-size: 0.95rem;
+}
+
+.auth-card form label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 14px;
+}
+
+.auth-card form input {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1.5px solid #ddd;
+  border-radius: 3px;
+  font-size: 1rem;
+  font-family: var(--font-body);
+}
+
+.auth-card form input:focus {
+  outline: none;
+  border-color: var(--deep-teal);
+}
+
+.auth-card button[type="submit"] {
+  width: 100%;
+  background: var(--deep-teal);
+  color: #fff;
+  border: none;
+  padding: 12px;
+  border-radius: 3px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.auth-card button[type="submit"]:hover {
+  background: #154a61;
+}
+
+.auth-card button[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--deep-teal);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0;
+  margin-top: 18px;
+  display: block;
+  font-family: var(--font-body);
+}
+
+.notice {
+  padding: 10px 12px;
+  border-radius: 3px;
+  font-size: 0.88rem;
+  margin-bottom: 14px;
+}
+
+.notice-warn {
+  background: var(--pale-gold);
+  border-left: 3px solid var(--gold);
+  color: #6b4f10;
+}
+
+.notice-error {
+  background: #fce8e6;
+  border-left: 3px solid #c0392b;
+  color: #8b2a1f;
+}
+
+.notice-success {
+  background: var(--sage);
+  border-left: 3px solid var(--sage-dark);
+  color: #2f4f31;
+}
+
+/* Level select ------------------------------------------------------ */
+.level-select {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+.level-select-header {
+  text-align: center;
+  margin-bottom: 40px;
+  position: relative;
+}
+
+.level-select-header h1 {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  color: var(--deep-teal);
+  margin: 0 0 6px;
+}
+
+.level-select-header .subtitle {
+  color: var(--grey);
+  margin: 0;
+}
+
+.level-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.level-card {
+  background: #fff;
+  border: 2px solid;
+  border-radius: 4px;
+  padding: 24px 20px;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.level-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+}
+
+.level-card-badge {
+  display: inline-block;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  padding: 6px 14px;
+  border-radius: 3px;
+  margin-bottom: 12px;
+}
+
+.level-card p {
+  color: var(--ink);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Quiz --------------------------------------------------------------- */
+.quiz {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 20px 60px;
+}
+
+.quiz-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.quiz-progress {
+  font-size: 0.88rem;
+  color: var(--grey);
+  font-weight: 600;
+}
+
+.quiz-card {
+  background: #fff;
+  border-radius: 6px;
+  padding: 32px;
+  box-shadow: 0 8px 30px rgba(26, 95, 122, 0.1);
+}
+
+.quiz-category {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--rust);
+  background: var(--pale-rust);
+  padding: 4px 10px;
+  border-radius: 3px;
+  margin-bottom: 16px;
+}
+
+.quiz-prompt {
+  margin-bottom: 24px;
+}
+
+.arabic-text {
+  font-family: var(--font-arabic);
+  font-size: 1.6rem;
+  direction: rtl;
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+
+.translit-text {
+  font-style: italic;
+  color: var(--deep-teal);
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+}
+
+.english-text {
+  color: var(--grey);
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quiz-option {
+  text-align: left;
+  padding: 13px 16px;
+  border: 1.5px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 1rem;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.quiz-option:hover:not(:disabled) {
+  border-color: var(--deep-teal);
+}
+
+.quiz-option:disabled {
+  cursor: default;
+}
+
+.quiz-option.correct {
+  border-color: var(--sage-dark);
+  background: var(--sage);
+  font-weight: 600;
+}
+
+.quiz-option.incorrect {
+  border-color: var(--rust);
+  background: var(--pale-rust);
+}
+
+.quiz-speaking {
+  text-align: center;
+  padding: 12px 0;
+}
+
+.mic-button {
+  background: var(--deep-teal);
+  color: #fff;
+  border: none;
+  padding: 16px 28px;
+  font-size: 1.05rem;
+  border-radius: 30px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 600;
+}
+
+.mic-button:disabled {
+  opacity: 0.7;
+}
+
+.speak-result {
+  margin-top: 16px;
+  text-align: left;
+  background: var(--cream);
+  border-radius: 4px;
+  padding: 14px 16px;
+}
+
+.clarity-score {
+  font-weight: 600;
+  color: var(--deep-teal);
+}
+
+.clarity-note {
+  font-weight: 400;
+  color: var(--grey);
+  font-size: 0.82rem;
+}
+
+.feedback {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.feedback-headline {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin: 0 0 10px;
+}
+
+.feedback-correct .feedback-headline {
+  color: var(--sage-dark);
+}
+
+.feedback-incorrect .feedback-headline {
+  color: var(--rust);
+}
+
+.expected-answer {
+  margin-bottom: 10px;
+}
+
+.explanation {
+  background: var(--sage);
+  border-left: 3px solid var(--deep-teal);
+  padding: 12px 14px;
+  border-radius: 3px;
+  margin: 12px 0;
+}
+
+.explanation-muted {
+  background: var(--cream);
+  border-left-color: var(--gold);
+}
+
+.next-button {
+  background: var(--rust);
+  color: #fff;
+  border: none;
+  padding: 11px 22px;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+.next-button:hover {
+  background: #9c4c2e;
+}
+
+.quiz-done {
+  text-align: center;
+  padding: 80px 20px;
+}
+
+/* Mobile -------------------------------------------------------- */
+@media (max-width: 600px) {
+  .auth-card {
+    padding: 28px 22px;
+  }
+  .quiz-card {
+    padding: 22px;
+  }
+  .level-select-header h1 {
+    font-size: 1.9rem;
+  }
+}
+
+/* Reduced motion -------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
