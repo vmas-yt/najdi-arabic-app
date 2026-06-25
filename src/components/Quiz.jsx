@@ -25,9 +25,23 @@ function shuffle(array) {
   return copy;
 }
 
-export default function Quiz({ level, onBackToLevels, onAdvanceLevel }) {
+export default function Quiz({ level, sessionLength, onBackToLevels, onAdvanceLevel }) {
   const { user } = useAuth();
-  const questions = useMemo(() => shuffle(QUESTION_BANKS[level] || []), [level]);
+  const baseQuestions = useMemo(() => shuffle(QUESTION_BANKS[level] || []), [level]);
+
+  // Build a fixed-length session queue up front. If sessionLength exceeds
+  // the bank size, cycle through additional shuffled passes so questions
+  // repeat as little as possible rather than all at once.
+  const sessionQuestions = useMemo(() => {
+    if (!baseQuestions.length) return [];
+    const queue = [];
+    let pass = shuffle(baseQuestions);
+    while (queue.length < sessionLength) {
+      if (pass.length === 0) pass = shuffle(baseQuestions);
+      queue.push(pass.shift());
+    }
+    return queue;
+  }, [baseQuestions, sessionLength]);
 
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState(null);
@@ -36,10 +50,11 @@ export default function Quiz({ level, onBackToLevels, onAdvanceLevel }) {
   const [listening, setListening] = useState(false);
   const [sessionCorrect, setSessionCorrect] = useState(0);
   const [sessionTotal, setSessionTotal] = useState(0);
+  const [sessionComplete, setSessionComplete] = useState(false);
 
-  // Rolling-accuracy + manual-toggle English visibility (intermediate only;
-  // see levelProgression.js). answerHistory is chronological, this session,
-  // this level only — resets if the user changes level and comes back.
+  // Rolling-accuracy + manual-toggle English visibility (all levels except
+  // advanced; see levelProgression.js). answerHistory is chronological,
+  // this session, this level only.
   const [answerHistory, setAnswerHistory] = useState([]);
   const [manualHideEnglish, setManualHideEnglish] = useState(false);
 
@@ -48,7 +63,8 @@ export default function Quiz({ level, onBackToLevels, onAdvanceLevel }) {
   const [categoryStats, setCategoryStats] = useState({});
   const [graduationDismissed, setGraduationDismissed] = useState(false);
 
-  const q = questions[index];
+  const q = sessionQuestions[index];
+  const questionNumber = index + 1;
 
   const showEnglish = shouldShowEnglish(level, manualHideEnglish, answerHistory);
   const nextLevel = NEXT_LEVEL[level];
@@ -69,11 +85,35 @@ export default function Quiz({ level, onBackToLevels, onAdvanceLevel }) {
     setGraduationDismissed(false);
   }, [level]);
 
-  if (!q) {
+  if (!baseQuestions.length) {
     return (
       <div className="quiz-done">
         <h2>No questions available for this level yet.</h2>
         <button onClick={onBackToLevels}>Back to levels</button>
+      </div>
+    );
+  }
+
+  if (sessionComplete) {
+    const skipped = sessionLength - sessionTotal;
+    return (
+      <div className="quiz-done">
+        <h2>Session complete!</h2>
+        <p className="session-summary">
+          You answered <strong>{sessionTotal}</strong> of{" "}
+          <strong>{sessionLength}</strong> questions, with{" "}
+          <strong>{sessionCorrect}</strong> correct
+          {skipped > 0 && (
+            <>
+              {" "}
+              ({skipped} skipped)
+            </>
+          )}
+          .
+        </p>
+        <button className="next-button" onClick={onBackToLevels}>
+          Back to levels
+        </button>
       </div>
     );
   }
@@ -135,13 +175,21 @@ export default function Quiz({ level, onBackToLevels, onAdvanceLevel }) {
     }
   }
 
+  function advanceOrFinish() {
+    if (index + 1 >= sessionQuestions.length) {
+      setSessionComplete(true);
+    } else {
+      setIndex((i) => i + 1);
+    }
+  }
+
   function handleNext() {
-    setIndex((i) => (i + 1) % questions.length);
+    advanceOrFinish();
   }
 
   function handleSkip() {
     // Skipping does not count as an attempt — no history/stats change.
-    setIndex((i) => (i + 1) % questions.length);
+    advanceOrFinish();
   }
 
   const isCorrect =
@@ -154,7 +202,7 @@ export default function Quiz({ level, onBackToLevels, onAdvanceLevel }) {
           ← Change level
         </button>
         <div className="quiz-topbar-right">
-          {level === "intermediate" && (
+          {level !== "advanced" && (
             <label className="english-toggle">
               <input
                 type="checkbox"
@@ -165,7 +213,7 @@ export default function Quiz({ level, onBackToLevels, onAdvanceLevel }) {
             </label>
           )}
           <span className="quiz-progress">
-            {sessionCorrect}/{sessionTotal} correct this session
+            Question {questionNumber} of {sessionLength} · {sessionCorrect}/{sessionLength} correct
           </span>
         </div>
       </div>
@@ -209,16 +257,24 @@ export default function Quiz({ level, onBackToLevels, onAdvanceLevel }) {
               const isSelected = selected === i;
               const isRight = answered && i === q.correctIndex;
               const isWrongPick = answered && isSelected && i !== q.correctIndex;
+              const isArabicOption = typeof opt === "object" && opt !== null;
               return (
                 <button
                   key={i}
-                  className={`quiz-option ${isRight ? "correct" : ""} ${
-                    isWrongPick ? "incorrect" : ""
-                  }`}
+                  className={`quiz-option ${isArabicOption ? "quiz-option-arabic" : ""} ${
+                    isRight ? "correct" : ""
+                  } ${isWrongPick ? "incorrect" : ""}`}
                   onClick={() => handleMcqSelect(i)}
                   disabled={answered}
                 >
-                  {opt}
+                  {isArabicOption ? (
+                    <>
+                      <span className="option-arabic">{opt.ar}</span>
+                      <span className="option-translit">{opt.translit}</span>
+                    </>
+                  ) : (
+                    opt
+                  )}
                 </button>
               );
             })}
@@ -263,23 +319,17 @@ export default function Quiz({ level, onBackToLevels, onAdvanceLevel }) {
               <p className="expected-answer">
                 Expected: <span className="arabic-text">{q.expectedAnswer.ar}</span>{" "}
                 <span className="translit-text">({q.expectedAnswer.translit})</span>
-                {showEnglish && <span className="english-text"> — {q.expectedAnswer.en}</span>}
+                <span className="english-text"> — {q.expectedAnswer.en}</span>
               </p>
             )}
 
-            {!isCorrect && (
-              <div className="explanation">
-                <p className="english-text">{q.explanation.en}</p>
-                <p className="arabic-text">{q.explanation.ar}</p>
-              </div>
-            )}
-            {/* Beginner level: always show explanation bilingually, even on correct answers */}
-            {isCorrect && showEnglish && (
-              <div className="explanation explanation-muted">
-                <p className="english-text">{q.explanation.en}</p>
-                <p className="arabic-text">{q.explanation.ar}</p>
-              </div>
-            )}
+            {/* Explanation is ALWAYS bilingual, regardless of the English
+                toggle or rolling-accuracy state — the toggle only affects
+                the prompt/answer area, never this block. */}
+            <div className={`explanation ${isCorrect ? "explanation-muted" : ""}`}>
+              <p className="english-text">{q.explanation.en}</p>
+              <p className="arabic-text">{q.explanation.ar}</p>
+            </div>
 
             <button className="next-button" onClick={handleNext}>
               Next question →
