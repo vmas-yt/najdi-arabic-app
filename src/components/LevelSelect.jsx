@@ -11,13 +11,14 @@ const LEVELS = [
     key: "intermediate",
     label: "Intermediate",
     color: "#B85C38",
-    description: "Past & future tense, possession, negation. English fades out as you improve.",
+    description: "Past & future tense, possession, negation, medium-length sentences. English fades out as you improve, or toggle it off yourself.",
   },
   {
     key: "advanced",
     label: "Advanced",
     color: "#6B4226",
     description: "Full Arabic, long sentences, passive voice. English only for explanations.",
+    comingSoon: true,
   },
 ];
 
@@ -44,6 +45,7 @@ export default function LevelSelect({ onSelectLevel }) {
           >
             <span className="level-card-badge" style={{ background: lvl.color }}>
               {lvl.label.toUpperCase()}
+              {lvl.comingSoon && " — COMING SOON"}
             </span>
             <p>{lvl.description}</p>
           </button>
